@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Management - Teacher Panel</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 p-4 max-w-md mx-auto">
+    <header class="text-center my-6">
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight">ATTENDANCE SYSTEM</h1>
+        <p class="text-sm font-bold text-indigo-600">Mathematics by D.K. Singh</p>
+    </header>
+
+    <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 mb-4">
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Select Active Batch</label>
+        <select id="batch-select" onchange="loadBatch()" class="w-full bg-slate-100 border border-slate-300 rounded-lg p-3 font-semibold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-indigo-500">
+            <option value="">-- Choose Batch --</option>
+            <option value="11th Evening">11th Evening</option>
+            <option value="Target Batch">Target Batch</option>
+        </select>
+    </div>
+
+    <div id="roster-box" class="hidden space-y-3">
+        <div id="students-container" class="space-y-2"></div>
+        <button onclick="submitAttendance()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl mt-6 transition shadow-md cursor-pointer">Submit Attendance Log</button>
+    </div>
+
+    <script>
+        const API_URL = "PASTE_YOUR_MAPPED_WEB_APP_URL_HERE"; 
+        let currentStudents = [];
+
+        function loadBatch() {
+            const batch = document.getElementById('batch-select').value;
+            if(!batch) return;
+            
+            const script = document.createElement('script');
+            script.src = `${API_URL}?action=fetchBatch&batchName=${encodeURIComponent(batch)}&callback=renderRoster&ts=${new Date().getTime()}`;
+            document.body.appendChild(script);
+        }
+
+        function renderRoster(data) {
+            const container = document.getElementById('students-container');
+            container.innerHTML = "";
+            if(!data.success || data.students.length === 0) {
+                container.innerHTML = `<p class="text-center text-sm font-semibold text-slate-400 py-6">No students found in this roster batch.</p>`;
+                return;
+            }
+            currentStudents = data.students;
+            currentStudents.forEach((student, idx) => {
+                student.status = "P"; 
+                const card = document.createElement('div');
+                card.className = "flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-xs";
+                card.innerHTML = `
+                    <div><p class="font-bold text-slate-900">${student.realName}</p><p class="text-xs font-mono text-slate-400">${student.username}</p></div>
+                    <div class="flex gap-2">
+                        <button id="p-btn-${idx}" onclick="setStatus(${idx}, 'P')" class="w-10 h-10 rounded-lg font-bold transition bg-emerald-600 text-white shadow-xs">P</button>
+                        <button id="a-btn-${idx}" onclick="setStatus(${idx}, 'A')" class="w-10 h-10 rounded-lg font-bold transition bg-slate-100 text-slate-400">A</button>
+                    </div>`;
+                container.appendChild(card);
+            });
+            document.getElementById('roster-box').classList.remove('hidden');
+        }
+
+        function setStatus(idx, status) {
+            currentStudents[idx].status = status;
+            const pBtn = document.getElementById(`p-btn-${idx}`);
+            const aBtn = document.getElementById(`a-btn-${idx}`);
+            if(status === 'P') {
+                pBtn.className = "w-10 h-10 rounded-lg font-bold bg-emerald-600 text-white shadow-xs";
+                aBtn.className = "w-10 h-10 rounded-lg font-bold bg-slate-100 text-slate-400";
+            } else {
+                pBtn.className = "w-10 h-10 rounded-lg font-bold bg-slate-100 text-slate-400";
+                aBtn.className = "w-10 h-10 rounded-lg font-bold bg-red-600 text-white shadow-xs";
+            }
+        }
+
+        function submitAttendance() {
+            const batch = document.getElementById('batch-select').value;
+            if(!confirm(`Submit attendance logs for ${batch}?`)) return;
+            
+            fetch(API_URL, {
+                method: "POST", mode: "no-cors", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ batchName: batch, records: currentStudents })
+            }).then(() => {
+                alert("Attendance saved to database successfully!");
+                location.reload();
+            });
+        }
+    </script>
+</body>
+</html>
