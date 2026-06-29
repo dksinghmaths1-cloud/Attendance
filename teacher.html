@@ -21,14 +21,13 @@
 
     <div id="roster-box" class="hidden space-y-3">
         <div id="students-container" class="space-y-2"></div>
-        <button onclick="submitAttendance()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl mt-6 transition shadow-md cursor-pointer">Submit Attendance Log</button>
+        <button type="button" onclick="submitAttendance()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl mt-6 transition shadow-md cursor-pointer">Submit Attendance Log</button>
     </div>
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbxwHYcwCSh4g760gvwSIugE9QTwcgOkMIZ-Vs4jS8PO8KfLSAYfuHkcvnY2oMWqz1ga1Q/exec"; 
         let currentStudents = [];
 
-        // 🔄 Fetch all batches right when your dad opens the app
         window.onload = function() {
             const script = document.createElement('script');
             script.src = `${API_URL}?action=getBatches&callback=populateBatches&ts=${new Date().getTime()}`;
@@ -38,13 +37,10 @@
         function populateBatches(data) {
             const dropdown = document.getElementById('batch-select');
             dropdown.innerHTML = '<option value="">-- Choose Batch --</option>';
-            
             if (data.success && data.batches.length > 0) {
                 data.batches.forEach(batch => {
                     const opt = document.createElement('option');
-                    opt.value = batch;
-                    opt.innerText = batch;
-                    dropdown.appendChild(opt);
+                    opt.value = batch; opt.innerText = batch; dropdown.appendChild(opt);
                 });
             } else {
                 dropdown.innerHTML = '<option value="">No batches found in roster</option>';
@@ -53,11 +49,7 @@
 
         function loadBatch() {
             const batch = document.getElementById('batch-select').value;
-            if(!batch) {
-                document.getElementById('roster-box').classList.add('hidden');
-                return;
-            }
-            
+            if(!batch) { document.getElementById('roster-box').classList.add('hidden'); return; }
             const script = document.createElement('script');
             script.src = `${API_URL}?action=fetchBatch&batchName=${encodeURIComponent(batch)}&callback=renderRoster&ts=${new Date().getTime()}`;
             document.body.appendChild(script);
@@ -78,8 +70,8 @@
                 card.innerHTML = `
                     <div><p class="font-bold text-slate-900">${student.realName}</p><p class="text-xs font-mono text-slate-400">${student.username}</p></div>
                     <div class="flex gap-2">
-                        <button id="p-btn-${idx}" onclick="setStatus(${idx}, 'P')" class="w-10 h-10 rounded-lg font-bold transition bg-emerald-600 text-white shadow-xs cursor-pointer">P</button>
-                        <button id="a-btn-${idx}" onclick="setStatus(${idx}, 'A')" class="w-10 h-10 rounded-lg font-bold transition bg-slate-100 text-slate-400 cursor-pointer">A</button>
+                        <button type="button" id="p-btn-${idx}" onclick="setStatus(${idx}, 'P')" class="w-10 h-10 rounded-lg font-bold bg-emerald-600 text-white shadow-xs cursor-pointer">P</button>
+                        <button type="button" id="a-btn-${idx}" onclick="setStatus(${idx}, 'A')" class="w-10 h-10 rounded-lg font-bold bg-slate-100 text-slate-400 cursor-pointer">A</button>
                     </div>`;
                 container.appendChild(card);
             });
@@ -103,13 +95,21 @@
             const batch = document.getElementById('batch-select').value;
             if(!confirm(`Submit attendance logs for ${batch}?`)) return;
             
-            fetch(API_URL, {
-                method: "POST", mode: "no-cors", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ batchName: batch, records: currentStudents })
-            }).then(() => {
+            const payload = encodeURIComponent(JSON.stringify(currentStudents));
+            
+            // 🚀 CLEAN DYNAMIC SCRIPT INJECTION FOR GET VALUES
+            const script = document.createElement('script');
+            script.src = `${API_URL}?action=saveAttendance&batchName=${encodeURIComponent(batch)}&records=${payload}&callback=handleSaveResponse&ts=${new Date().getTime()}`;
+            document.body.appendChild(script);
+        }
+
+        function handleSaveResponse(data) {
+            if(data.success) {
                 alert("Attendance saved to database successfully!");
                 location.reload();
-            });
+            } else {
+                alert("Error writing to database: " + data.error);
+            }
         }
     </script>
 </body>
