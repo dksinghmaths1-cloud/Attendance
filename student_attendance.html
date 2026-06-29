@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Attendance Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 p-4 max-w-md mx-auto">
+    <div id="login-panel" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xl mt-12 text-center">
+        <h1 class="text-xl font-black text-slate-900">STUDENT ATTENDANCE METRICS</h1>
+        <p class="text-xs font-bold text-slate-400 mt-0.5">Mathematics by D.K. Singh</p>
+        <input type="text" id="username-input" class="w-full mt-6 border border-slate-300 rounded-xl p-3 text-center font-mono text-lg tracking-wide focus:outline-hidden focus:ring-2 focus:ring-indigo-500" placeholder="Enter Username">
+        <button onclick="checkAttendance()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl mt-4 transition shadow-md cursor-pointer">View My Roster History</button>
+    </div>
+
+    <div id="dashboard" class="hidden space-y-4">
+        <div class="bg-white border border-slate-200 rounded-2xl p-6 text-center shadow-xs">
+            <h2 id="student-name" class="text-xl font-black text-slate-900">---</h2>
+            <div class="my-4 inline-block bg-indigo-50 px-6 py-2 rounded-full border border-indigo-100 text-2xl font-black text-indigo-600">
+                Attendance Ratio: <span id="attendance-pct">0%</span>
+            </div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+            <h3 class="font-bold text-xs uppercase tracking-wider text-slate-400 mb-3">Chronological Session Logs</h3>
+            <div id="logs-container" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbzVRSIaYNq9S-TUsi5aQO6h1jLdnS3N7GQjnZ8HXo6t6JSz1e5bj4DQdgI_AMXEP8Ll/exec";
+
+        function checkAttendance() {
+            const user = document.getElementById('username-input').value.trim();
+            if(!user) return;
+            const script = document.createElement('script');
+            script.src = `${API_URL}?action=studentHistory&username=${encodeURIComponent(user)}&callback=showMetrics&ts=${new Date().getTime()}`;
+            document.body.appendChild(script);
+        }
+
+        function showMetrics(data) {
+            if(!data.success || !data.history || data.history.length === 0) { alert("No attendance logs found for this username."); return; }
+            document.getElementById('login-panel').className = "hidden";
+            
+            let total = data.history.length, presents = data.history.filter(h => h.status === "P").length;
+            document.getElementById('attendance-pct').innerText = `${Math.round((presents/total)*100)}%`;
+            
+            // Set the student's name if database records exist
+            if(data.history[0] && data.history[0].realName) {
+                document.getElementById('student-name').innerText = data.history[0].realName;
+            } else {
+                document.getElementById('student-name').innerText = document.getElementById('username-input').value.trim();
+            }
+            
+            const container = document.getElementById('logs-container');
+            container.innerHTML = "";
+            data.history.reverse().forEach(log => {
+                const row = document.createElement('div');
+                row.className = "flex justify-between items-center border-b border-slate-100 py-2.5 text-sm";
+                let statusHTML = log.status === "P" ? `<span class="bg-emerald-50 text-emerald-700 text-xs font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">Present</span>` : `<span class="bg-red-50 text-red-700 text-xs font-bold px-2.5 py-0.5 rounded-full border border-red-200">Absent</span>`;
+                row.innerHTML = `<div><p class="font-bold text-slate-800">${log.date}</p><p class="text-xs font-medium text-slate-400">${log.batchName}</p></div>${statusHTML}`;
+                container.appendChild(row);
+            });
+            document.getElementById('dashboard').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
