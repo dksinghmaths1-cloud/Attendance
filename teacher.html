@@ -15,9 +15,7 @@
     <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 mb-4">
         <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Select Active Batch</label>
         <select id="batch-select" onchange="loadBatch()" class="w-full bg-slate-100 border border-slate-300 rounded-lg p-3 font-semibold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-indigo-500">
-            <option value="">-- Choose Batch --</option>
-            <option value="11th Evening">11th Evening</option>
-            <option value="Target Batch">Target Batch</option>
+            <option value="">-- Loading Batches From Sheet... --</option>
         </select>
     </div>
 
@@ -27,12 +25,38 @@
     </div>
 
     <script>
-        const API_URL = "PASTE_YOUR_MAPPED_WEB_APP_URL_HERE"; 
+        const API_URL = "https://script.google.com/macros/s/AKfycbzVRSIaYNq9S-TUsi5aQO6h1jLdnS3N7GQjnZ8HXo6t6JSz1e5bj4DQdgI_AMXEP8Ll/exec"; 
         let currentStudents = [];
+
+        // 🔄 Fetch all batches right when your dad opens the app
+        window.onload = function() {
+            const script = document.createElement('script');
+            script.src = `${API_URL}?action=getBatches&callback=populateBatches&ts=${new Date().getTime()}`;
+            document.body.appendChild(script);
+        };
+
+        function populateBatches(data) {
+            const dropdown = document.getElementById('batch-select');
+            dropdown.innerHTML = '<option value="">-- Choose Batch --</option>';
+            
+            if (data.success && data.batches.length > 0) {
+                data.batches.forEach(batch => {
+                    const opt = document.createElement('option');
+                    opt.value = batch;
+                    opt.innerText = batch;
+                    dropdown.appendChild(opt);
+                });
+            } else {
+                dropdown.innerHTML = '<option value="">No batches found in roster</option>';
+            }
+        }
 
         function loadBatch() {
             const batch = document.getElementById('batch-select').value;
-            if(!batch) return;
+            if(!batch) {
+                document.getElementById('roster-box').classList.add('hidden');
+                return;
+            }
             
             const script = document.createElement('script');
             script.src = `${API_URL}?action=fetchBatch&batchName=${encodeURIComponent(batch)}&callback=renderRoster&ts=${new Date().getTime()}`;
@@ -54,8 +78,8 @@
                 card.innerHTML = `
                     <div><p class="font-bold text-slate-900">${student.realName}</p><p class="text-xs font-mono text-slate-400">${student.username}</p></div>
                     <div class="flex gap-2">
-                        <button id="p-btn-${idx}" onclick="setStatus(${idx}, 'P')" class="w-10 h-10 rounded-lg font-bold transition bg-emerald-600 text-white shadow-xs">P</button>
-                        <button id="a-btn-${idx}" onclick="setStatus(${idx}, 'A')" class="w-10 h-10 rounded-lg font-bold transition bg-slate-100 text-slate-400">A</button>
+                        <button id="p-btn-${idx}" onclick="setStatus(${idx}, 'P')" class="w-10 h-10 rounded-lg font-bold transition bg-emerald-600 text-white shadow-xs cursor-pointer">P</button>
+                        <button id="a-btn-${idx}" onclick="setStatus(${idx}, 'A')" class="w-10 h-10 rounded-lg font-bold transition bg-slate-100 text-slate-400 cursor-pointer">A</button>
                     </div>`;
                 container.appendChild(card);
             });
@@ -67,11 +91,11 @@
             const pBtn = document.getElementById(`p-btn-${idx}`);
             const aBtn = document.getElementById(`a-btn-${idx}`);
             if(status === 'P') {
-                pBtn.className = "w-10 h-10 rounded-lg font-bold bg-emerald-600 text-white shadow-xs";
-                aBtn.className = "w-10 h-10 rounded-lg font-bold bg-slate-100 text-slate-400";
+                pBtn.className = "w-10 h-10 rounded-lg font-bold bg-emerald-600 text-white shadow-xs cursor-pointer";
+                aBtn.className = "w-10 h-10 rounded-lg font-bold bg-slate-100 text-slate-400 cursor-pointer";
             } else {
-                pBtn.className = "w-10 h-10 rounded-lg font-bold bg-slate-100 text-slate-400";
-                aBtn.className = "w-10 h-10 rounded-lg font-bold bg-red-600 text-white shadow-xs";
+                pBtn.className = "w-10 h-10 rounded-lg font-bold bg-slate-100 text-slate-400 cursor-pointer";
+                aBtn.className = "w-10 h-10 rounded-lg font-bold bg-red-600 text-white shadow-xs cursor-pointer";
             }
         }
 
